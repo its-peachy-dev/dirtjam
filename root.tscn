@@ -1,3 +1,70 @@
-[gd_scene format=3 uid="uid://cnarxxdefve0h"]
+[gd_scene load_steps=8 format=3 uid="uid://cnarxxdefve0h"]
 
-[node name="Node3D" type="Node3D"]
+[ext_resource type="Script" uid="uid://30s16xjb64xi" path="res://world/draw_terrain.gd" id="1_pq8q7"]
+[ext_resource type="Script" uid="uid://ljw6lgyricip" path="res://camera/debug_camera_controller.gd" id="2_pyidc"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pyidc"]
+sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+ground_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+
+[sub_resource type="Sky" id="Sky_vvh5c"]
+sky_material = SubResource("ProceduralSkyMaterial_pyidc")
+
+[sub_resource type="Environment" id="Environment_28aoi"]
+background_mode = 1
+background_color = Color(0.24, 0.24, 0.24, 1)
+sky = SubResource("Sky_vvh5c")
+tonemap_mode = 2
+tonemap_white = 1.68
+glow_enabled = true
+glow_normalized = true
+glow_intensity = 1.75
+glow_strength = 1.65
+glow_bloom = 0.33
+
+[sub_resource type="CompositorEffect" id="CompositorEffect_jnlp7"]
+resource_local_to_scene = false
+resource_name = ""
+enabled = true
+effect_callback_type = 4
+needs_motion_vectors = false
+needs_normal_roughness = false
+script = ExtResource("1_pq8q7")
+regenerate = false
+side_length = 400
+mesh_scale = 0.5
+wireframe = false
+noise_seed = 135
+zoom = 139.5
+offset = Vector3(-200, 95, -326)
+gradient_rotation = 70.0
+octave_count = 12
+rotation = -23.182
+angular_variance = Vector2(15, 15)
+initial_amplitude = 0.74
+amplitude_decay = 0.45
+lacunarity = 1.991
+frequency_variance = Vector2(-0.085, 0.115)
+height_scale = 90.9
+slope_damping = 0.155
+slope_threshold = Vector2(0.84, 0.98)
+low_slope_color = Color(0.386348, 0.464782, 0.261694, 1)
+high_slope_color = Color(0.1, 0.05, 0.05, 1)
+ambient_light = Color(0.19, 0.27, 0.3, 1)
+metadata/_custom_type_script = "uid://30s16xjb64xi"
+
+[sub_resource type="Compositor" id="Compositor_l8v81"]
+compositor_effects = Array[CompositorEffect]([SubResource("CompositorEffect_jnlp7")])
+
+[node name="Root" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.396683, -0.794973, 0.458978, 2.78059e-08, 0.5, 0.866025, -0.917956, 0.343538, -0.198342, 0, 65.0576, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_28aoi")
+compositor = SubResource("Compositor_l8v81")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+script = ExtResource("2_pyidc")
