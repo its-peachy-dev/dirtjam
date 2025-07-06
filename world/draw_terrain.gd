@@ -75,6 +75,15 @@ class_name DrawTerrainMesh extends CompositorEffect
 @export var ambient_light : Color = Color.DIM_GRAY
 
 
+@export_group("Fog Settings")
+## color of the depth fog
+@export var depth_fog_color : Color = Color.DIM_GRAY
+## depth fog starting distance
+@export var depth_fog_start : float = 50.0
+## depth fog fully opaque distance
+@export var depth_fog_end : float = 300.0
+
+
 var transform : Transform3D
 var light : DirectionalLight3D
 
@@ -100,7 +109,7 @@ func _init():
 	effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
 	
 	rd = RenderingServer.get_rendering_device()
-
+	
 	# Gets whatever light source is in the scene, compositor effects are resources not nodes and so we need to do some jank stuff to get access to the node scene tree
 	var tree := Engine.get_main_loop() as SceneTree
 	var root : Node = tree.edited_scene_root if Engine.is_editor_hint() else tree.current_scene
@@ -288,6 +297,9 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 
 	# Default light direction if no light source is found
 	var light_direction = Vector3(0, 1, 0)
+	
+	var camera_pos = render_scene_data.get_cam_transform().origin
+	
 
 	# Attempt to find a light source if no light source was found earlier
 	if not light:
@@ -335,6 +347,19 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	buffer.push_back(ambient_light.r)
 	buffer.push_back(ambient_light.g)
 	buffer.push_back(ambient_light.b)
+	buffer.push_back(1.0)
+	#PEACHY
+	buffer.push_back(depth_fog_color.r)
+	buffer.push_back(depth_fog_color.g)
+	buffer.push_back(depth_fog_color.b)
+	buffer.push_back(1.0)
+	buffer.push_back(depth_fog_start)
+	buffer.push_back(depth_fog_end)
+	buffer.push_back(1.0)
+	buffer.push_back(1.0)
+	buffer.push_back(camera_pos.x)
+	buffer.push_back(camera_pos.y)
+	buffer.push_back(camera_pos.z)
 	buffer.push_back(1.0)
 	
 
@@ -429,7 +454,13 @@ const source_vertex = "
 			float _FrequencyVarianceUpperBound;
 			float _SlopeDamping;
 			vec4 _AmbientLight;
+			vec4 _DepthFogColor;
+			float _DepthFogStart;
+			float _DepthFogEnd;
+			vec3 _CameraPos;
 		};
+		
+		
 		
 		// This is the vertex data layout that we defined in initialize_render after line 198
 		layout(location = 0) in vec3 a_Position;
@@ -620,7 +651,12 @@ const source_fragment = "
 			float _FrequencyVarianceUpperBound;
 			float _SlopeDamping;
 			vec4 _AmbientLight;
+			vec4 _DepthFogColor;
+			float _DepthFogStart;
+			float _DepthFogEnd;
+			vec3 _CameraPos;
 		};
+		
 		
 		// These are the variables that we expect to receive from the vertex shader
 		layout(location = 2) in vec4 a_Color;
@@ -790,9 +826,16 @@ const source_fragment = "
 
 			// Combine lighting values, clip to prevent pixel values greater than 1 which would really really mess up the gamma correction below
 			vec4 lit = clamp(direct_light + ambient_light, vec4(0), vec4(1));
+			
+			float dist = distance(pos, _CameraPos);
+			
+			float fogdist = smoothstep(_DepthFogStart, _DepthFogEnd, dist);
+			
+			vec4 foggd = mix(lit, _DepthFogColor, fogdist);
 
 			// Convert from linear rgb to srgb for proper color output, ideally you'd do this as some final post processing effect because otherwise you will need to revert this gamma correction elsewhere
-			frag_color = pow(lit, vec4(2.2));
+			//frag_color = pow(lit, vec4(2.2));
+			frag_color = pow(foggd, vec4(2.2));
 		}
 		"
 
@@ -822,6 +865,10 @@ const source_wire_fragment = "
 			float _FrequencyVarianceUpperBound;
 			float _SlopeDamping;
 			vec4 _AmbientLight;
+			vec4 _DepthFogColor;
+			float _DepthFogStart;
+			float _DepthFogEnd;
+			vec3 _CameraPos;
 		};
 		
 		layout(location = 2) in vec4 a_Color;
