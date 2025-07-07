@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://cnarxxdefve0h"]
+[gd_scene load_steps=9 format=3 uid="uid://cnarxxdefve0h"]
 
 [ext_resource type="Script" uid="uid://30s16xjb64xi" path="res://world/draw_terrain.gd" id="1_pq8q7"]
 [ext_resource type="Script" uid="uid://ljw6lgyricip" path="res://camera/debug_camera_controller.gd" id="2_pyidc"]
+[ext_resource type="Script" uid="uid://crxsckaob4aoh" path="res://DebugPanel.gd" id="3_vvh5c"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pyidc"]
 sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
@@ -31,14 +32,17 @@ needs_motion_vectors = false
 needs_normal_roughness = false
 script = ExtResource("1_pq8q7")
 regenerate = false
-side_length = 400
+side_length = 1000
 mesh_scale = 1.0
 wireframe = false
 noise_seed = 135
-zoom = 139.5
+zoom = 161.2
 offset = Vector3(0, 109, -326)
 gradient_rotation = 70.0
-octave_count = 12
+min_octave_count = 2
+max_octave_count = 16
+max_octave_distance = 30.0
+min_octave_distance = 400.0
 rotation = -23.182
 angular_variance = Vector2(15, 15)
 initial_amplitude = 0.74
@@ -52,8 +56,8 @@ low_slope_color = Color(0.386348, 0.464782, 0.261694, 1)
 high_slope_color = Color(0.194076, 0.163908, 0.17191, 1)
 ambient_light = Color(0.19, 0.27, 0.3, 1)
 depth_fog_color = Color(0.24, 0.24, 0.24, 1)
-depth_fog_start = 50.0
-depth_fog_end = 300.0
+depth_fog_start = 100.0
+depth_fog_end = 800.0
 metadata/_custom_type_script = "uid://30s16xjb64xi"
 
 [sub_resource type="Compositor" id="Compositor_l8v81"]
@@ -72,3 +76,18 @@ compositor = SubResource("Compositor_l8v81")
 [node name="Camera3D" type="Camera3D" parent="."]
 fov = 37.8493
 script = ExtResource("2_pyidc")
+
+[node name="DebugPanel" type="VBoxContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 40.0
+grow_horizontal = 0
+size_flags_vertical = 0
+script = ExtResource("3_vvh5c")
+
+[node name="FPSLabel" type="Label" parent="DebugPanel"]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
