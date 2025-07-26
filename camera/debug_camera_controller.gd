@@ -9,6 +9,9 @@ var position_lerp_time = 0.2;
 
 var rotation_lerp_time = 0.01;
 
+var world_env : WorldEnvironment
+var terrain_compositor : DrawTerrainMesh
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -17,6 +20,10 @@ func _ready() -> void:
 
 	target_camera_state.SetFromTransform(self.rotation, self.position)
 	interpolating_camera_state.SetFromTransform(self.rotation, self.position)
+	
+	world_env = $"../WorldEnvironment"
+	terrain_compositor = world_env.compositor.compositor_effects[0]
+	#terrain_compositor.offset =  Vector3(0.0,-100.0,0.0)
 
 func get_input_direction() -> Vector3:
 	var direction = Vector3(0, 0, 0);
@@ -54,6 +61,8 @@ func _process(delta: float) -> void:
 	interpolating_camera_state.LerpTowards(target_camera_state, positionLerpPct, 0);
 
 	self.position = interpolating_camera_state.GetCameraPosition()
+	
+	
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:

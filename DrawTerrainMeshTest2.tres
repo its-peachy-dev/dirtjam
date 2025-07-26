@@ -1,0 +1,40 @@
+[gd_resource type="CompositorEffect" script_class="DrawTerrainMesh" load_steps=2 format=3 uid="uid://dcrjadqwomtpn"]
+
+[ext_resource type="Script" uid="uid://30s16xjb64xi" path="res://world/draw_terrain.gd" id="1_lwgeb"]
+
+[resource]
+resource_local_to_scene = false
+resource_name = ""
+enabled = true
+effect_callback_type = 4
+needs_motion_vectors = false
+needs_normal_roughness = false
+script = ExtResource("1_lwgeb")
+regenerate = false
+side_length = 400
+mesh_scale = 0.5
+wireframe = false
+noise_seed = 135
+zoom = 161.2
+offset = Vector3(0, 108, -326)
+gradient_rotation = 70.0
+min_octave_count = 5
+max_octave_count = 12
+max_octave_distance = 100.0
+min_octave_distance = 800.0
+rotation = 30.0
+angular_variance = Vector2(15, 15)
+initial_amplitude = 0.614
+amplitude_decay = 0.46
+lacunarity = 1.992
+frequency_variance = Vector2(-0.085, 0.115)
+height_scale = 90.9
+slope_damping = 0.155
+slope_threshold = Vector2(0.84, 0.98)
+low_slope_color = Color(0.401382, 0.45492, 0.322735, 1)
+high_slope_color = Color(0.166847, 0.171954, 0.193606, 1)
+ambient_light = Color(0.19, 0.27, 0.3, 1)
+depth_fog_color = Color(0.24, 0.24, 0.24, 1)
+depth_fog_start = 400.0
+depth_fog_end = 1600.0
+metadata/_custom_type_script = "uid://30s16xjb64xi"
