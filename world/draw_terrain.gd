@@ -644,7 +644,7 @@ const source_vertex = "
 			// Adjust height of the vertex by fbm result scaled by final desired amplitude
 			pos.y += _TerrainHeight * n.x + _TerrainHeight - _Offset.y;
 			
-			/*
+			
 			v_Color = vec4(1);
 			
 			vec3 step_pos = vec3(0);
@@ -668,10 +668,10 @@ const source_vertex = "
 					break;
 				}
 			}
-			*/
+			
 			
 			// Passes the vertex color over to the fragment shader, even though we don't use it but you can use it if you want I guess
-			v_Color = a_Color;
+			//v_Color = a_Color;
 			
 			// Multiply final vertex position with model/view/projection matrices to convert to clip space
 			gl_Position = MVP * vec4(pos, 1);
@@ -720,7 +720,8 @@ const source_fragment = "
 			
 
 			// This is the actual surface normal vector
-			vec3 normal = normalize(vec3(-n.y, 1, -n.z));
+			vec3 normal = normalize(vec3(-n.y, _TerrainHeight, -n.z)); //HUH?
+			//vec3 normal = normalize(vec3(-n.y, 1, -n.z));
 
 			// Lambertian diffuse, negative dot product values clamped off because negative light doesn't exist
 			float ndotl = clamp(dot(_LightDirection, normal), 0, 1);
@@ -737,14 +738,14 @@ const source_fragment = "
 			
 			float spec = pow(max(ndoth, 0.0), shinyness) * ndotl * spec_normalization;
 			
-			//spec *= specular_intensity;
-			//ndotl *= diffuse_intensity;
+			spec *= specular_intensity;
+			ndotl *= diffuse_intensity;
 
 			// Direct light cares about the diffuse result, ambient light does not
-			vec4 direct_light = albedo * ndotl;// * a_Color;
+			vec4 direct_light = albedo * ndotl * a_Color;
 			vec4 ambient_light = albedo * _AmbientLight;
 			
-			vec4 specular_light = vec4(1, 1, 1, 0) * spec;// * a_Color;
+			vec4 specular_light = vec4(1, 1, 1, 0) * spec * a_Color;
 
 			// Combine lighting values, clip to prevent pixel values greater than 1 which would really really mess up the gamma correction below
 			vec4 lit = clamp(direct_light + ambient_light + specular_light, vec4(0), vec4(1));
@@ -755,12 +756,66 @@ const source_fragment = "
 			
 			// Convert from linear rgb to srgb for proper color output, ideally you'd do this as some final post processing effect because otherwise you will need to revert this gamma correction elsewhere
 			
-			//frag_color = pow(foggd, vec4(2.2));
+			frag_color = pow(foggd, vec4(2.2));
 			//frag_color = a_Color;
-			frag_color = vec4(_LightDirection, 1.0);
-			//frag_color = direct_light;
+			/*
+			if(max(max(abs(normal.x), abs(normal.y)), abs(normal.z)) == abs(normal.x))
+			{
+				frag_color = vec4(abs(normal.x),0,0,1);
+			}
+			else if(max(max(abs(normal.x), abs(normal.y)), abs(normal.z)) == abs(normal.y))
+			{
+				frag_color = vec4(0,abs(normal.y),0,1);
+			}
+			else
+			{
+				frag_color = vec4(0,0,abs(normal.z),1);
+			}
+			*/
 		}
 		"
+		
+const source_fragment_old = "
+		// These are the variables that we expect to receive from the vertex shader
+		layout(location = 2) in vec4 a_Color;
+		layout(location = 3) in vec3 pos;
+		
+		// This is what the fragment shader will output, usually just a pixel color
+		layout(location = 0) out vec4 frag_color;
+
+		void main() {
+			// Recalculate initial noise sampling position same as vertex shader
+			vec3 noise_pos = (pos + vec3(_Offset.x, 0, _Offset.z)) / _Scale;
+
+			// Calculate fbm, we don't care about the height just the derivatives here for the normal vector so the ` + _TerrainHeight - _Offset.y` drops off as it isn't relevant to the derivative
+			vec3 n = _TerrainHeight * fbm(noise_pos.xz, _MaxOctaves);
+
+			// To more easily customize the color slope blending this is a separate normal vector with its horizontal gradients significantly reduced so the normal points upwards more
+			vec3 slope_normal = normalize(vec3(-n.y, 1, -n.z) * vec3(_SlopeDamping, 1, _SlopeDamping));
+
+			// Use the slope of the above normal to create the blend value between the two terrain colors
+			float material_blend_factor = smoothstep(_SlopeRange.x, _SlopeRange.y, 1 - slope_normal.y);
+
+			// Blend between the two terrain colors
+			vec4 albedo = mix(_LowSlopeColor, _HighSlopeColor, vec4(material_blend_factor));
+
+			// This is the actual surface normal vector
+			vec3 normal = normalize(vec3(-n.y, 1, -n.z));
+
+			// Lambertian diffuse, negative dot product values clamped off because negative light doesn't exist
+			float ndotl = clamp(dot(_LightDirection, normal), 0, 1);
+
+			// Direct light cares about the diffuse result, ambient light does not
+			vec4 direct_light = albedo * ndotl;
+			vec4 ambient_light = albedo * _AmbientLight;
+
+			// Combine lighting values, clip to prevent pixel values greater than 1 which would really really mess up the gamma correction below
+			vec4 lit = clamp(direct_light + ambient_light, vec4(0), vec4(1));
+
+			// Convert from linear rgb to srgb for proper color output, ideally you'd do this as some final post processing effect because otherwise you will need to revert this gamma correction elsewhere
+			frag_color = pow(lit, vec4(2.2));
+		}
+"
 
 # I am not going to explain the wireframe shader it's pretty straight forward okay thanks
 const source_wire_fragment = "
