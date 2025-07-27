@@ -720,7 +720,8 @@ const source_fragment = "
 			
 
 			// This is the actual surface normal vector
-			vec3 normal = normalize(vec3(-n.y, _TerrainHeight, -n.z)); //HUH?
+			//vec3 normal = normalize(vec3(-n.y, _TerrainHeight, -n.z)); //HUH?
+			vec3 normal = normalize(vec3(-n.y, _Scale, -n.z)); 
 			//vec3 normal = normalize(vec3(-n.y, 1, -n.z));
 
 			// Lambertian diffuse, negative dot product values clamped off because negative light doesn't exist
