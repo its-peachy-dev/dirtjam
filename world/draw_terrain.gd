@@ -670,7 +670,7 @@ const source_fragment = "
 			float dist = distance(pos, _CameraPos);
 			
 			//calc view direction
-			vec3 viewdir = normalize(pos-_CameraPos);
+			vec3 viewdir = normalize(_CameraPos-pos);
 			
 			//calc fbm octaves
 			float octave_dist_frac = (dist - _MaxOctaveDist) / (_MinOctaveDist - _MaxOctaveDist);
@@ -699,13 +699,24 @@ const source_fragment = "
 			
 			vec3 halfway = normalize(_LightDirection + viewdir);
 			
-			float ndoth = clamp(dot(halfway, normal), 0, 1);
+			float ndoth = dot(normal, halfway);
+			
+			float shinyness = 4.0 - (material_blend_factor * 2.0);
+			float spec_normalization = ((shinyness + 2.0) * (shinyness + 4.0)) / (8.0 * PI * (pow(2.0, -shinyness * 0.5) + shinyness));
+
+			float specular_intensity = 0.05;
+			float diffuse_intensity = 1.0-specular_intensity;
+			
+			float spec = pow(max(ndoth, 0.0), shinyness) * ndotl * spec_normalization;
+			
+			spec *= specular_intensity;
+			ndotl *= diffuse_intensity;
 
 			// Direct light cares about the diffuse result, ambient light does not
 			vec4 direct_light = albedo * ndotl;
 			vec4 ambient_light = albedo * _AmbientLight;
 			
-			vec4 specular_light = albedo * ndoth;
+			vec4 specular_light = vec4(1, 1, 1, 0) * spec;
 
 			// Combine lighting values, clip to prevent pixel values greater than 1 which would really really mess up the gamma correction below
 			vec4 lit = clamp(direct_light + ambient_light + specular_light, vec4(0), vec4(1));

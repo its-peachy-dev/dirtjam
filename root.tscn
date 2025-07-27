@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://cnarxxdefve0h"]
+[gd_scene load_steps=8 format=3 uid="uid://cnarxxdefve0h"]
 
 [ext_resource type="CompositorEffect" uid="uid://dcrjadqwomtpn" path="res://DrawTerrainMeshTest2.tres" id="1_l8v81"]
 [ext_resource type="Script" uid="uid://ljw6lgyricip" path="res://camera/debug_camera_controller.gd" id="2_pyidc"]
@@ -26,56 +26,11 @@ glow_bloom = 0.33
 [sub_resource type="Compositor" id="Compositor_l8v81"]
 compositor_effects = Array[CompositorEffect]([ExtResource("1_l8v81")])
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vvh5c"]
-emission_enabled = true
-emission = Color(1, 1, 1, 1)
-emission_energy_multiplier = 13.96
-disable_receive_shadows = true
-
-[sub_resource type="SphereMesh" id="SphereMesh_28aoi"]
-material = SubResource("StandardMaterial3D_vvh5c")
-radius = 10.0
-height = 10.0
-
-[sub_resource type="Animation" id="Animation_jnlp7"]
-resource_name = "new_animation"
-length = 30.0
-loop_mode = 1
-tracks/0/type = "rotation_3d"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 15.0333, 1, 1, 0, 0, 0, 30, 1, 0, 0, 0, -1)
-tracks/1/type = "rotation_3d"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("../DirectionalLight3D")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 15.0333, 1, 1, 0, 0, 0, 30, 1, 0, 0, 0, -1)
-
-[sub_resource type="Animation" id="Animation_l8v81"]
-length = 0.001
-tracks/0/type = "rotation_3d"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath(".")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
-
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_vyht1"]
-_data = {
-&"RESET": SubResource("Animation_l8v81"),
-&"new_animation": SubResource("Animation_jnlp7")
-}
-
 [node name="Root" type="Node3D"]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.649265, -0.760562, 0, 0.760562, 0.649265, 0, 18.7066, 0)
+transform = Transform3D(0.562083, 0.584834, -0.584834, 0, 0.707107, 0.707107, 0.827081, -0.397453, 0.397453, 2.66655, 19.2315, 0)
+top_level = true
 shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -100,17 +55,3 @@ script = ExtResource("3_vvh5c")
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
-
-[node name="SunPivot" type="Node3D" parent="."]
-
-[node name="Marker3D" type="Marker3D" parent="SunPivot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1000)
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="SunPivot/Marker3D"]
-mesh = SubResource("SphereMesh_28aoi")
-
-[node name="AnimationPlayer" type="AnimationPlayer" parent="SunPivot"]
-libraries = {
-&"": SubResource("AnimationLibrary_vyht1")
-}
-autoplay = "new_animation"
