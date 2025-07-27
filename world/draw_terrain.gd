@@ -622,8 +622,7 @@ const source_vertex = "
 
 		
 		void main() {
-			// Passes the vertex color over to the fragment shader, even though we don't use it but you can use it if you want I guess
-			v_Color = a_Color;
+
 
 			// The fragment shader also calculates the fractional brownian motion for pixel perfect normal vectors and lighting, so we pass the vertex position to the fragment shader
 			pos = a_Position;
@@ -644,6 +643,35 @@ const source_vertex = "
 
 			// Adjust height of the vertex by fbm result scaled by final desired amplitude
 			pos.y += _TerrainHeight * n.x + _TerrainHeight - _Offset.y;
+			
+			/*
+			v_Color = vec4(1);
+			
+			vec3 step_pos = vec3(0);
+			float base_step_size = 2.0;
+			int i = 1;
+			for(i;i<51;i++)
+			{
+				float step_size = base_step_size * max(floor(i/10), 1);
+				step_pos += _LightDirection * step_size;
+				if(step_pos.y > _TerrainHeight)
+				{
+					break;
+				}
+				vec3 noise_pos2 = (pos + vec3(_Offset.x + step_pos.x, 0, _Offset.z+step_pos.z)) / _Scale;
+				vec3 n2 = fbm(noise_pos2.xz, octaves);
+				float ypos = _TerrainHeight * n2.x + _TerrainHeight - _Offset.y;
+				
+				if(ypos >= pos.y + step_pos.y)
+				{
+					v_Color = vec4(0);
+					break;
+				}
+			}
+			*/
+			
+			// Passes the vertex color over to the fragment shader, even though we don't use it but you can use it if you want I guess
+			v_Color = a_Color;
 			
 			// Multiply final vertex position with model/view/projection matrices to convert to clip space
 			gl_Position = MVP * vec4(pos, 1);
@@ -709,14 +737,14 @@ const source_fragment = "
 			
 			float spec = pow(max(ndoth, 0.0), shinyness) * ndotl * spec_normalization;
 			
-			spec *= specular_intensity;
-			ndotl *= diffuse_intensity;
+			//spec *= specular_intensity;
+			//ndotl *= diffuse_intensity;
 
 			// Direct light cares about the diffuse result, ambient light does not
-			vec4 direct_light = albedo * ndotl;
+			vec4 direct_light = albedo * ndotl;// * a_Color;
 			vec4 ambient_light = albedo * _AmbientLight;
 			
-			vec4 specular_light = vec4(1, 1, 1, 0) * spec;
+			vec4 specular_light = vec4(1, 1, 1, 0) * spec;// * a_Color;
 
 			// Combine lighting values, clip to prevent pixel values greater than 1 which would really really mess up the gamma correction below
 			vec4 lit = clamp(direct_light + ambient_light + specular_light, vec4(0), vec4(1));
@@ -727,7 +755,10 @@ const source_fragment = "
 			
 			// Convert from linear rgb to srgb for proper color output, ideally you'd do this as some final post processing effect because otherwise you will need to revert this gamma correction elsewhere
 			
-			frag_color = pow(foggd, vec4(2.2));
+			//frag_color = pow(foggd, vec4(2.2));
+			//frag_color = a_Color;
+			frag_color = vec4(_LightDirection, 1.0);
+			//frag_color = direct_light;
 		}
 		"
 
