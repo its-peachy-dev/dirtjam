@@ -93,6 +93,10 @@ class_name DrawTerrainMesh extends CompositorEffect
 ## depth fog fully opaque distance
 @export var depth_fog_end : float = 300.0
 
+@export_group("Experimental Settings")
+@export var heightmap : Texture2D
+var heightmap_image : Image
+var hm_tex : RID
 
 var transform : Transform3D
 var light : DirectionalLight3D
@@ -124,6 +128,8 @@ func _init():
 	var tree := Engine.get_main_loop() as SceneTree
 	var root : Node = tree.edited_scene_root if Engine.is_editor_hint() else tree.current_scene
 	if root: light = root.get_node_or_null('DirectionalLight3D')
+	
+
 
 # Compiles... the shader...?
 func compile_shader(vertex_shader : String, fragment_shader : String) -> RID:
@@ -145,6 +151,19 @@ func compile_shader(vertex_shader : String, fragment_shader : String) -> RID:
 func initialize_render(framebuffer_format : int):
 	p_shader = compile_shader(source_vertex, source_fragment)
 	p_wire_shader = compile_shader(source_vertex, source_wire_fragment)
+	
+	heightmap_image = heightmap.get_image()
+	heightmap_image.convert(Image.Format.FORMAT_RGBAF)
+	var hm_format := RDTextureFormat.new()
+	hm_format.width = heightmap_image.get_width()
+	hm_format.height = heightmap_image.get_height()
+	hm_format.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
+	#hm_format.format = RenderingDevice.DATA_FORMAT_R8G8B8A8_UINT
+	hm_format.usage_bits = RenderingDevice.TEXTURE_USAGE_STORAGE_BIT
+	var hm_view := RDTextureView.new()
+	hm_tex = rd.texture_create(hm_format,hm_view,[heightmap_image.get_data()])
+	
+	
 
 	var vertex_buffer := PackedFloat32Array([])
 	var half_length = (side_length - 1) / 2.0
@@ -390,6 +409,14 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	uniform.add_id(p_uniform_buffer)
 	uniforms.push_back(uniform)
 	
+	
+
+	var hmuniform = RDUniform.new()
+	hmuniform.binding = 1
+	hmuniform.uniform_type = rd.UNIFORM_TYPE_IMAGE
+	hmuniform.add_id(hm_tex)
+	uniforms.push_back(hmuniform)
+	
 	# Currently we just free the previously instantiated uniform set and then make a new one, ideally this is only done when the uniform variables change
 	if p_render_pipeline_uniform_set.is_valid():
 		rd.free_rid(p_render_pipeline_uniform_set)
@@ -474,6 +501,10 @@ const source_settings_buffer = "
 			float _MinOctaveDist;
 			float _MaxOctaveDist;
 		};
+		
+		
+		layout(rgba32f, set = 0, binding = 1) uniform image2D heightmap;
+		
 		"
 
 const source_utils = "
@@ -627,6 +658,16 @@ const source_vertex = "
 			// The fragment shader also calculates the fractional brownian motion for pixel perfect normal vectors and lighting, so we pass the vertex position to the fragment shader
 			pos = a_Position;
 			
+
+			
+			//pos.y = pos.x;
+			ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
+			vec4 pixel = imageLoad(heightmap, coords);
+			//v_Color = pixel/255;
+			pos.y = pixel.r * 20;
+			//pos.y = int(pos.x) % 4;
+			
+			/*
 			//calc distance to camera
 			float dist = distance(pos, _CameraPos);
 			
@@ -668,10 +709,10 @@ const source_vertex = "
 					break;
 				}
 			}
-			
+			*/
 			
 			// Passes the vertex color over to the fragment shader, even though we don't use it but you can use it if you want I guess
-			//v_Color = a_Color;
+			v_Color = a_Color;
 			
 			// Multiply final vertex position with model/view/projection matrices to convert to clip space
 			gl_Position = MVP * vec4(pos, 1);
@@ -758,6 +799,9 @@ const source_fragment = "
 			// Convert from linear rgb to srgb for proper color output, ideally you'd do this as some final post processing effect because otherwise you will need to revert this gamma correction elsewhere
 			
 			frag_color = pow(foggd, vec4(2.2));
+			
+			
+			//DEBUGSTUFF
 			//frag_color = a_Color;
 			/*
 			if(max(max(abs(normal.x), abs(normal.y)), abs(normal.z)) == abs(normal.x))
@@ -773,6 +817,9 @@ const source_fragment = "
 				frag_color = vec4(0,0,abs(normal.z),1);
 			}
 			*/
+			ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
+			vec4 pixel = imageLoad(heightmap, coords);
+			frag_color = vec4(pixel.xyz,1.0);
 		}
 		"
 		

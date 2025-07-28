@@ -1,6 +1,14 @@
-[gd_resource type="CompositorEffect" script_class="DrawTerrainMesh" load_steps=2 format=3 uid="uid://dcrjadqwomtpn"]
+[gd_resource type="CompositorEffect" script_class="DrawTerrainMesh" load_steps=4 format=3 uid="uid://dcrjadqwomtpn"]
 
 [ext_resource type="Script" uid="uid://30s16xjb64xi" path="res://world/draw_terrain.gd" id="1_lwgeb"]
+
+[sub_resource type="Gradient" id="Gradient_lwgeb"]
+offsets = PackedFloat32Array(0, 0.517123, 1)
+colors = PackedColorArray(0.455479, 0.455479, 0.455479, 1, 0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_mhq65"]
+gradient = SubResource("Gradient_lwgeb")
+fill_from = Vector2(0, 1)
 
 [resource]
 resource_local_to_scene = false
@@ -37,4 +45,5 @@ ambient_light = Color(0.19, 0.27, 0.3, 1)
 depth_fog_color = Color(0.24, 0.24, 0.24, 1)
 depth_fog_start = 100.0
 depth_fog_end = 600.0
+heightmap = SubResource("GradientTexture2D_mhq65")
 metadata/_custom_type_script = "uid://30s16xjb64xi"
