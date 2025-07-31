@@ -117,7 +117,12 @@ var p_wire_index_buffer : RID
 var p_wire_index_array : RID
 var p_shader : RID
 var p_wire_shader : RID
+var p_compute_shader : RID
+var p_compute_pipeline : RID
+var p_compute_shader_uniform_set :RID
 var clear_colors := PackedColorArray([Color.DARK_BLUE])
+
+var test_debug_str = ""
 
 func _init():
 	effect_callback_type = CompositorEffect.EFFECT_CALLBACK_TYPE_POST_TRANSPARENT
@@ -137,20 +142,38 @@ func compile_shader(vertex_shader : String, fragment_shader : String) -> RID:
 	src.source_vertex = source_settings_buffer+source_utils+vertex_shader
 	src.source_fragment = source_settings_buffer+source_utils+fragment_shader
 	
+	
 	var shader_spirv : RDShaderSPIRV = rd.shader_compile_spirv_from_source(src)
 	
 	var err = shader_spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_VERTEX)
 	if err: push_error(err)
 	err = shader_spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_FRAGMENT)
 	if err: push_error(err)
+	err = shader_spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_COMPUTE)
+	if err: push_error(err)
+	
 	
 	var shader : RID = rd.shader_create_from_spirv(shader_spirv)
 	
 	return shader
+	
+func compile_compute_shader(compute_shader : String) -> RID:
+	var src := RDShaderSource.new()
+	src.source_compute = source_settings_buffer+source_utils+compute_shader
+		
+	var shader_spirv : RDShaderSPIRV = rd.shader_compile_spirv_from_source(src)
+	
+	var err = shader_spirv.get_stage_compile_error(RenderingDevice.SHADER_STAGE_COMPUTE)
+	if err: push_error(err)
+	
+	var shader : RID = rd.shader_create_from_spirv(shader_spirv)
+	return shader
+	
 
 func initialize_render(framebuffer_format : int):
 	p_shader = compile_shader(source_vertex, source_fragment)
 	p_wire_shader = compile_shader(source_vertex, source_wire_fragment)
+	p_compute_shader = compile_compute_shader(world_compute_source)
 	
 	heightmap_image = heightmap.get_image()
 	heightmap_image.convert(Image.Format.FORMAT_RGBAF)
@@ -286,6 +309,7 @@ func initialize_render_pipelines(framebuffer_format : int) -> void:
 	p_render_pipeline = rd.render_pipeline_create(p_shader, framebuffer_format, vertex_format, rd.RENDER_PRIMITIVE_TRIANGLES, raster_state, RDPipelineMultisampleState.new(), depth_state, blend)
 	p_wire_render_pipeline = rd.render_pipeline_create(p_wire_shader, framebuffer_format, vertex_format, rd.RENDER_PRIMITIVE_LINES, raster_state, RDPipelineMultisampleState.new(), depth_state, blend)
 
+	p_compute_pipeline = rd.compute_pipeline_create(p_compute_shader)
 
 
 func _render_callback(_effect_callback_type : int, render_data : RenderData):
@@ -297,7 +321,7 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	
 	if not render_scene_buffers: return
 
-	if regenerate or not p_render_pipeline.is_valid():
+	if regenerate or not p_render_pipeline.is_valid() or not p_compute_pipeline.is_valid():
 		_notification(NOTIFICATION_PREDELETE)
 		p_framebuffer = FramebufferCacheRD.get_cache_multipass([render_scene_buffers.get_color_texture(), render_scene_buffers.get_depth_texture()], [], 1)
 		initialize_render(rd.framebuffer_get_format(p_framebuffer))
@@ -310,24 +334,57 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 		p_framebuffer = current_framebuffer
 		initialize_render_pipelines(rd.framebuffer_get_format(p_framebuffer))
 
+	var size: Vector2i = render_scene_buffers.get_internal_size()
+	if size.x == 0 and size.y == 0:
+		return
+
+	# We can use a compute shader here.
+	@warning_ignore("integer_division")
+	var compute_x_groups := (size.x - 1) / 8 + 1
+	@warning_ignore("integer_division")
+	var compute_y_groups := (size.y - 1) / 8 + 1
+	var compute_z_groups := 1
+	var push_constant := PackedFloat32Array([
+				size.x,
+				size.y,
+				0.0,
+				0.0,
+			])
+
 	var buffer = Array()
 
 	# Assemble the model, view, and projection matrices for vertex world space -> clip space conversion (watch PS1 video if you care about how this works but otherwise it just works(tm))
 	var model = transform
 	var view = render_scene_data.get_cam_transform().inverse()
 	var projection = render_scene_data.get_view_projection(0)
+	
+	var compute_input_image: RID = render_scene_buffers.get_color_layer(0)
 
 	var model_view = Projection(view * model)
 	var MVP = projection * model_view;
+	var VP = Projection(view);
 	
 	# Store MVP matrix in gpu data buffer
 	for i in range(0,16):
 		buffer.push_back(MVP[i / 4][i % 4])
+		
+	# Store VP matrix in gpu data buffer
+	for i in range(0,16):
+		buffer.push_back(VP[i / 4][i % 4])
 
 	# Default light direction if no light source is found
 	var light_direction = Vector3(0, 1, 0)
 	
 	var camera_pos = render_scene_data.get_cam_transform().origin
+	var camera_dir = -render_scene_data.get_cam_transform().basis.z.normalized()
+	
+	var testpos = camera_pos + camera_dir
+	
+	
+	var test_str = str(camera_pos)+str(testpos)
+	if test_str != test_debug_str:
+		test_debug_str = test_str
+		print_debug(test_debug_str)
 	
 
 	# Attempt to find a light source if no light source was found earlier
@@ -389,6 +446,10 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	buffer.push_back(camera_pos.x)
 	buffer.push_back(camera_pos.y)
 	buffer.push_back(camera_pos.z)
+	buffer.push_back(1.0)
+	buffer.push_back(camera_dir.x)
+	buffer.push_back(camera_dir.y)
+	buffer.push_back(camera_dir.z)
 	
 	buffer.push_back(max_octave_count)
 	buffer.push_back(min_octave_distance)
@@ -417,11 +478,24 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	hmuniform.add_id(hm_tex)
 	uniforms.push_back(hmuniform)
 	
+	var compute_uniform := RDUniform.new()
+	compute_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
+	compute_uniform.binding = 2
+	compute_uniform.add_id(compute_input_image)
+	
+	
+	
 	# Currently we just free the previously instantiated uniform set and then make a new one, ideally this is only done when the uniform variables change
 	if p_render_pipeline_uniform_set.is_valid():
 		rd.free_rid(p_render_pipeline_uniform_set)
 	
+	if p_compute_shader_uniform_set.is_valid():
+		rd.free_rid(p_compute_shader_uniform_set)
+	
 	p_render_pipeline_uniform_set = rd.uniform_set_create(uniforms, p_shader, 0)
+	
+	uniforms.push_back(compute_uniform)
+	p_compute_shader_uniform_set = rd.uniform_set_create(uniforms, p_compute_shader, 0)
 
 	# If you frame capture the program with something like NVIDIA NSight you will see this label show up so you can easily see the render time of the terrain
 	rd.draw_command_begin_label("Terrain Mesh", Color(1.0, 1.0, 1.0, 1.0))
@@ -447,6 +521,13 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 
 	rd.draw_command_end_label()
 
+	var compute_list := rd.compute_list_begin()
+	rd.compute_list_bind_compute_pipeline(compute_list, p_compute_pipeline)
+	rd.compute_list_bind_uniform_set(compute_list, p_compute_shader_uniform_set, 0)
+	rd.compute_list_set_push_constant(compute_list, push_constant.to_byte_array(), push_constant.size() * 4)
+	rd.compute_list_dispatch(compute_list, compute_x_groups, compute_y_groups, compute_z_groups)
+	rd.compute_list_end()
+
 
 func _notification(what):
 	if what == NOTIFICATION_PREDELETE:
@@ -466,6 +547,8 @@ func _notification(what):
 			rd.free_rid(p_wire_index_array)
 		if p_wire_index_buffer.is_valid():
 			rd.free_rid(p_wire_index_buffer)
+		if p_compute_shader.is_valid():
+			rd.free_rid(p_compute_shader)
 
 const source_settings_buffer = "
 		#version 450
@@ -473,6 +556,7 @@ const source_settings_buffer = "
 		// This is the uniform buffer that contains all of the settings we sent over from the cpu in _render_callback. Must match with the one in the fragment shader.
 		layout(set = 0, binding = 0, std140) uniform UniformBufferObject {
 			mat4 MVP;
+			mat4 VP;
 			vec3 _LightDirection;
 			float _GradientRotation;
 			float _NoiseRotation;
@@ -497,6 +581,7 @@ const source_settings_buffer = "
 			float _DepthFogStart;
 			float _DepthFogEnd;
 			vec3 _CameraPos;
+			vec3 _CameraDir;
 			float _MaxOctaves;
 			float _MinOctaveDist;
 			float _MaxOctaveDist;
@@ -664,10 +749,10 @@ const source_vertex = "
 			ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
 			vec4 pixel = imageLoad(heightmap, coords);
 			//v_Color = pixel/255;
-			pos.y = pixel.r * 20;
+			//pos.y = pixel.r * 20;
 			//pos.y = int(pos.x) % 4;
 			
-			/*
+			
 			//calc distance to camera
 			float dist = distance(pos, _CameraPos);
 			
@@ -709,10 +794,10 @@ const source_vertex = "
 					break;
 				}
 			}
-			*/
+			
 			
 			// Passes the vertex color over to the fragment shader, even though we don't use it but you can use it if you want I guess
-			v_Color = a_Color;
+			//v_Color = a_Color;
 			
 			// Multiply final vertex position with model/view/projection matrices to convert to clip space
 			gl_Position = MVP * vec4(pos, 1);
@@ -817,9 +902,9 @@ const source_fragment = "
 				frag_color = vec4(0,0,abs(normal.z),1);
 			}
 			*/
-			ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
-			vec4 pixel = imageLoad(heightmap, coords);
-			frag_color = vec4(pixel.xyz,1.0);
+			//ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
+			//vec4 pixel = imageLoad(heightmap, coords);
+			//frag_color = vec4(pixel.xyz,1.0);
 		}
 		"
 		
@@ -876,3 +961,128 @@ const source_wire_fragment = "
 			frag_color = vec4(1, 0, 0, 1);
 		}
 		"
+
+
+
+const world_compute_source = "
+
+
+// Invocations in the (x, y, z) dimension
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(rgba16f, set = 0, binding = 2) uniform image2D color_image;
+
+// Our push constant
+layout(push_constant, std430) uniform Params {
+	vec2 raster_size;
+	vec2 reserved;
+} params;
+
+
+// params:
+// p: arbitrary point in 3D space
+// c: the center of our sphere
+// r: the radius of our sphere
+float distance_from_sphere(in vec3 p, in vec3 c, float r)
+{
+	return length(p - c) - r;
+}
+
+float map_the_world(in vec3 p)
+{
+	float sphere_0 = distance_from_sphere(p, vec3(0.0, 0.5, -1.0), 0.8);
+	float sphere_1 = distance_from_sphere(p, vec3(0.0, 0.0, 0.0), 0.9);
+	
+	return min(sphere_0, sphere_1);
+}
+
+vec4 ray_march(in vec3 ro, in vec3 rd)
+{
+	float total_distance_traveled = 0.0;
+	const int NUMBER_OF_STEPS = 32;
+	const float MINIMUM_HIT_DISTANCE = 0.001;
+	const float MAXIMUM_TRACE_DISTANCE = 1000.0;
+
+	for (int i = 0; i < NUMBER_OF_STEPS; ++i)
+	{
+		// Calculate our current position along the ray
+		vec3 current_position = ro + total_distance_traveled * rd;
+
+		// We wrote this function earlier in the tutorial -
+		// assume that the sphere is centered at the origin
+		// and has unit radius
+		float distance_to_closest = map_the_world(current_position);
+
+		if (distance_to_closest < MINIMUM_HIT_DISTANCE) // hit
+		{
+			// We hit something! Return red for now
+			return vec4(1.0, 0.0, 0.0, 1.0);
+		}
+
+		if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE) // miss
+		{
+			break;
+		}
+
+		// accumulate the distance traveled thus far
+		total_distance_traveled += distance_to_closest;
+	}
+
+	// If we get here, we didn't hit anything so just
+	// return a background color (black)
+	return vec4(1.0, 1.0, 1.0, 0.2);
+}
+
+
+
+// The code we want to execute in each invocation
+void main() {
+	ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 size = ivec2(params.raster_size);
+
+	// Prevent reading/writing out of bounds.
+	if (uv.x >= size.x || uv.y >= size.y) {
+		return;
+	}
+
+	float aspect = size.x/float(size.y);
+
+	vec2 uv_mapped = vec2(uv.x/float(size.x), uv.y/float(size.y)) * 2.0 - 1.0;
+	uv_mapped.x *= -aspect;
+
+	vec3 camera_position = _CameraPos;
+	vec3 ro = camera_position;
+	
+	vec3 camera_direction = _CameraDir;
+	
+	vec3 screen_center = camera_position + camera_direction;
+	
+	vec3 screen_right = normalize(cross(camera_direction, vec3(0.0,1.0,0.0)));  
+	
+	vec3 screen_up = normalize(cross(camera_direction, screen_right)); 
+	
+	vec3 rd = screen_center + -uv_mapped.x*screen_right + uv_mapped.y*screen_up;
+	
+	//vec4 rd_t = test + VP * vec4(-uv_mapped, 1.0, 1.0);
+	//vec3 rd = rd_t.xyz;
+	
+	//vec4 test = VP * vec4(rd, 1);
+
+	// Read from our color buffer.
+	vec4 color = imageLoad(color_image, uv);
+
+	// Apply our changes.
+	float gray = color.r * 0.2125 + color.g * 0.7154 + color.b * 0.0721;
+
+	//color.rgb = vec3(gray);
+	//color.rgb = vec3(uv.x/float(size.x), 0.0 , 0.0);
+	color *= ray_march(ro, rd);
+
+	// Write back to our color buffer.
+	imageStore(color_image, uv, color);
+}
+
+
+
+
+	"

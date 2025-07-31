@@ -22,7 +22,7 @@ func _ready() -> void:
 	interpolating_camera_state.SetFromTransform(self.rotation, self.position)
 	
 	world_env = $"../WorldEnvironment"
-	terrain_compositor = world_env.compositor.compositor_effects[0]
+	#terrain_compositor = world_env.compositor.compositor_effects[0]
 	#terrain_compositor.offset =  Vector3(0.0,-100.0,0.0)
 
 func get_input_direction() -> Vector3:

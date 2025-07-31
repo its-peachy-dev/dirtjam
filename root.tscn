@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://cnarxxdefve0h"]
+[gd_scene load_steps=9 format=3 uid="uid://cnarxxdefve0h"]
 
 [ext_resource type="CompositorEffect" uid="uid://dcrjadqwomtpn" path="res://DrawTerrainMeshTest2.tres" id="1_l8v81"]
 [ext_resource type="Script" uid="uid://ljw6lgyricip" path="res://camera/debug_camera_controller.gd" id="2_pyidc"]
@@ -26,10 +26,12 @@ glow_bloom = 0.33
 [sub_resource type="Compositor" id="Compositor_l8v81"]
 compositor_effects = Array[CompositorEffect]([ExtResource("1_l8v81")])
 
+[sub_resource type="SphereMesh" id="SphereMesh_vvh5c"]
+
 [node name="Root" type="Node3D"]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.961985, 0.273103, 0, -0.273103, -0.961985, 2.667, 14.231, 0.445)
+transform = Transform3D(1, 0, 0, 0, -0.91706, 0.398749, 0, -0.398749, -0.91706, 2.667, 14.231, 0.445)
 top_level = true
 shadow_enabled = true
 
@@ -38,6 +40,7 @@ environment = SubResource("Environment_28aoi")
 compositor = SubResource("Compositor_l8v81")
 
 [node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.895557, 0, 0.444948, 0, 1, 0, -0.444948, 0, 0.895557, 1.282, 0.0468683, -0.141077)
 fov = 37.8493
 script = ExtResource("2_pyidc")
 
@@ -55,3 +58,11 @@ script = ExtResource("3_vvh5c")
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+
+[node name="TestSphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, 0, -4)
+mesh = SubResource("SphereMesh_vvh5c")
+
+[node name="TestSphere2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 0, 0.5, -5)
+mesh = SubResource("SphereMesh_vvh5c")
