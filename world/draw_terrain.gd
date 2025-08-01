@@ -380,8 +380,18 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	
 	var testpos = camera_pos + camera_dir
 	
+	var screen_center = camera_pos + camera_dir;
 	
-	var test_str = str(camera_pos)+str(testpos)
+	var screen_right = camera_dir.cross(Vector3(0.0,1.0,0.0)).normalized();  
+	
+	var screen_up = camera_dir.cross(screen_right).normalized(); 
+	
+	var dummy_pixel = Vector2(-0.25, -0.25)
+	
+	var ray_target = screen_center + -dummy_pixel.x*screen_right + dummy_pixel.y*screen_up;
+	
+	
+	var test_str = str(camera_pos)+str(testpos)+str(ray_target)
 	if test_str != test_debug_str:
 		test_debug_str = test_str
 		print_debug(test_debug_str)
@@ -520,7 +530,7 @@ func _render_callback(_effect_callback_type : int, render_data : RenderData):
 	rd.draw_list_end()
 
 	rd.draw_command_end_label()
-
+ 
 	var compute_list := rd.compute_list_begin()
 	rd.compute_list_bind_compute_pipeline(compute_list, p_compute_pipeline)
 	rd.compute_list_bind_uniform_set(compute_list, p_compute_shader_uniform_set, 0)
@@ -988,12 +998,19 @@ float distance_from_sphere(in vec3 p, in vec3 c, float r)
 	return length(p - c) - r;
 }
 
+float distance_from_floor(in vec3 p, in float h)
+{
+	return p.y - h;
+}
+
 float map_the_world(in vec3 p)
 {
 	float sphere_0 = distance_from_sphere(p, vec3(0.0, 0.5, -1.0), 0.8);
 	float sphere_1 = distance_from_sphere(p, vec3(0.0, 0.0, 0.0), 0.9);
 	
-	return min(sphere_0, sphere_1);
+	float floor = distance_from_floor(p, 0.0);
+	
+	return min(min(sphere_0, sphere_1), floor);
 }
 
 vec4 ray_march(in vec3 ro, in vec3 rd)
@@ -1008,9 +1025,6 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
 		// Calculate our current position along the ray
 		vec3 current_position = ro + total_distance_traveled * rd;
 
-		// We wrote this function earlier in the tutorial -
-		// assume that the sphere is centered at the origin
-		// and has unit radius
 		float distance_to_closest = map_the_world(current_position);
 
 		if (distance_to_closest < MINIMUM_HIT_DISTANCE) // hit
@@ -1048,7 +1062,7 @@ void main() {
 	float aspect = size.x/float(size.y);
 
 	vec2 uv_mapped = vec2(uv.x/float(size.x), uv.y/float(size.y)) * 2.0 - 1.0;
-	uv_mapped.x *= -aspect;
+	//uv_mapped.x *= -aspect;
 
 	vec3 camera_position = _CameraPos;
 	vec3 ro = camera_position;
@@ -1075,8 +1089,9 @@ void main() {
 	float gray = color.r * 0.2125 + color.g * 0.7154 + color.b * 0.0721;
 
 	//color.rgb = vec3(gray);
-	//color.rgb = vec3(uv.x/float(size.x), 0.0 , 0.0);
-	color *= ray_march(ro, rd);
+	//color.rgb = vec3(uv.x/float(size.x), uv.y/float(size.y), 0.0);
+	color.rgb = vec3(uv_mapped.x+1.0, uv_mapped.y+1.0, 0.0);
+	//color *= ray_march(ro, rd);
 
 	// Write back to our color buffer.
 	imageStore(color_image, uv, color);

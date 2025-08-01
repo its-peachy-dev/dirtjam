@@ -40,7 +40,7 @@ environment = SubResource("Environment_28aoi")
 compositor = SubResource("Compositor_l8v81")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.895557, 0, 0.444948, 0, 1, 0, -0.444948, 0, 0.895557, 1.282, 0.0468683, -0.141077)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4)
 fov = 37.8493
 script = ExtResource("2_pyidc")
 
