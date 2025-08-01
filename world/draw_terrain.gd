@@ -660,14 +660,11 @@ const source_vertex = "
 			
 
 			
-			//pos.y = pos.x;
-			ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
-			vec4 pixel = imageLoad(heightmap, coords);
-			//v_Color = pixel/255;
-			pos.y = pixel.r * 20;
-			//pos.y = int(pos.x) % 4;
+			//ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
+			//vec4 pixel = imageLoad(heightmap, coords);
+			//pos.y = pixel.r * 20;
 			
-			/*
+			
 			//calc distance to camera
 			float dist = distance(pos, _CameraPos);
 			
@@ -709,10 +706,10 @@ const source_vertex = "
 					break;
 				}
 			}
-			*/
+			
 			
 			// Passes the vertex color over to the fragment shader, even though we don't use it but you can use it if you want I guess
-			v_Color = a_Color;
+			//v_Color = a_Color;
 			
 			// Multiply final vertex position with model/view/projection matrices to convert to clip space
 			gl_Position = MVP * vec4(pos, 1);
@@ -817,9 +814,9 @@ const source_fragment = "
 				frag_color = vec4(0,0,abs(normal.z),1);
 			}
 			*/
-			ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
-			vec4 pixel = imageLoad(heightmap, coords);
-			frag_color = vec4(pixel.xyz,1.0);
+			//ivec2 coords = ivec2(int(pos.x) % 16,int(pos.z) % 16);
+			//vec4 pixel = imageLoad(heightmap, coords);
+			//frag_color = vec4(pixel.xyz,1.0);
 		}
 		"
 		

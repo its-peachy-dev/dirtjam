@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://cnarxxdefve0h"]
+[gd_scene load_steps=11 format=3 uid="uid://cnarxxdefve0h"]
 
 [ext_resource type="CompositorEffect" uid="uid://dcrjadqwomtpn" path="res://DrawTerrainMeshTest2.tres" id="1_l8v81"]
 [ext_resource type="Script" uid="uid://ljw6lgyricip" path="res://camera/debug_camera_controller.gd" id="2_pyidc"]
@@ -26,10 +26,52 @@ glow_bloom = 0.33
 [sub_resource type="Compositor" id="Compositor_l8v81"]
 compositor_effects = Array[CompositorEffect]([ExtResource("1_l8v81")])
 
+[sub_resource type="Animation" id="Animation_vvh5c"]
+resource_name = "orbit"
+length = 15.0
+loop_mode = 1
+tracks/0/type = "rotation_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0.0666667, 1, 0, 0, 0, 1, 7.4, 1, 0, 1, 0, 0, 15, 1, 0, 0, 0, -1)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("DirectionalLight3D")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 4.96667, 1, -0.707, 0, 0, 0.707, 10.1, 1, 1, 0, 0, 0, 13, 1, 0.707, 0, 0, 0.707, 15.0333, 1, 0.923664, 0, 0, 0.383203)
+
+[sub_resource type="Animation" id="Animation_28aoi"]
+length = 0.001
+tracks/0/type = "rotation_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("DirectionalLight3D")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1)
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_jnlp7"]
+_data = {
+&"RESET": SubResource("Animation_28aoi"),
+&"orbit": SubResource("Animation_vvh5c")
+}
+
 [node name="Root" type="Node3D"]
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, -0.961985, 0.273103, 0, -0.273103, -0.961985, 2.667, 14.231, 0.445)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.667, 14.231, 0.445)
 top_level = true
 shadow_enabled = true
 
@@ -38,6 +80,7 @@ environment = SubResource("Environment_28aoi")
 compositor = SubResource("Compositor_l8v81")
 
 [node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.994522, 0.104528, 0, -0.104528, 0.994522, 0, 70, 326)
 fov = 37.8493
 script = ExtResource("2_pyidc")
 
@@ -55,3 +98,11 @@ script = ExtResource("3_vvh5c")
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+
+[node name="Node3D" type="Node3D" parent="."]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_jnlp7")
+}
+autoplay = "orbit"
